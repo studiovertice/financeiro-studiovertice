@@ -254,7 +254,38 @@ textarea.fi{resize:vertical;min-height:70px;line-height:1.5;}
 </style>
 </head>
 <body>
-<div class="app">
+<style>
+/* LOGIN */
+.login-screen{position:fixed;inset:0;background:var(--dark);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;}
+.login-box{background:var(--d2);border:1px solid var(--d3);border-radius:20px;padding:40px 36px;width:100%;max-width:380px;text-align:center;}
+.login-brand{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--gold);margin-bottom:4px;}
+.login-sub{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:32px;}
+.login-box .fg{text-align:left;margin-bottom:14px;}
+.login-error{background:var(--rp);border:1px solid rgba(217,107,90,.3);color:var(--red);border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:14px;display:none;}
+.login-footer{font-size:11px;color:var(--muted);margin-top:20px;}
+.user-pill{display:flex;align-items:center;gap:8px;background:var(--d3);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--muted);cursor:pointer;}
+.user-pill:hover{background:var(--d4);}
+.user-pill span{color:var(--cream);}
+</style>
+
+<!-- TELA DE LOGIN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div class="login-brand">Deborah Abreu</div>
+    <div class="login-sub">Sistema de Gestão</div>
+    <div class="login-error" id="login-error">E-mail ou senha incorretos. Tente novamente.</div>
+    <div class="fg">
+      <label class="fl">E-mail</label>
+      <input class="fi" type="email" id="login-email" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')fazerLogin()">
+    </div>
+    <div class="fg" style="margin-bottom:20px">
+      <label class="fl">Senha</label>
+      <input class="fi" type="password" id="login-senha" placeholder="••••••••" onkeydown="if(event.key==='Enter')fazerLogin()">
+    </div>
+    <button class="btn btn-gold" style="width:100%;padding:11px;font-size:13px" onclick="fazerLogin()" id="login-btn">Entrar</button>
+    <div class="login-footer">Sistema privado — acesso restrito</div>
+  </div>
+</div>
 
 <!-- SIDEBAR -->
 <div class="sidebar" id="sidebar">
@@ -309,6 +340,9 @@ textarea.fi{resize:vertical;min-height:70px;line-height:1.5;}
         <button onclick="prevM()">‹</button>
         <div class="month-lbl" id="month-lbl">Março 2026</div>
         <button onclick="nextM()">›</button>
+      </div>
+      <div class="user-pill" onclick="fazerLogout()" title="Sair">
+        <span id="user-email-display">—</span> · Sair
       </div>
     </div>
   </div>
@@ -678,6 +712,41 @@ textarea.fi{resize:vertical;min-height:70px;line-height:1.5;}
 const SUPA_URL = 'https://qlvisozxumeuvltiadww.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsdmlzb3p4dW1ldXZsdGlhZHd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NjI5NzQsImV4cCI6MjA5MDQzODk3NH0.OyOgx2m11fkzFW56hgw1qTgx1A_7yGzxAutTz9ksHqs';
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+// ===== AUTH =====
+async function fazerLogin(){
+  const email=document.getElementById('login-email').value.trim();
+  const senha=document.getElementById('login-senha').value;
+  const btn=document.getElementById('login-btn');
+  const erro=document.getElementById('login-error');
+  if(!email||!senha)return;
+  btn.textContent='Entrando...';btn.disabled=true;erro.style.display='none';
+  const {data,error}=await sb.auth.signInWithPassword({email,password:senha});
+  if(error){
+    erro.style.display='block';btn.textContent='Entrar';btn.disabled=false;
+  } else {
+    document.getElementById('login-screen').style.display='none';
+    const nome=email.split('@')[0];
+    document.getElementById('user-email-display').textContent=nome;
+    dbLoad();
+  }
+}
+async function fazerLogout(){
+  if(!confirm('Deseja sair do sistema?'))return;
+  await sb.auth.signOut();
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('login-email').value='';
+  document.getElementById('login-senha').value='';
+}
+async function verificarSessao(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(session){
+    document.getElementById('login-screen').style.display='none';
+    const nome=session.user.email.split('@')[0];
+    document.getElementById('user-email-display').textContent=nome;
+    dbLoad();
+  }
+}
 
 // Mostrar loading
 function showLoading(msg='Carregando...'){
@@ -1224,7 +1293,7 @@ function renderConfig(){
 
 // INIT
 updateML();
-dbLoad();
+verificarSessao();
 </script>
 </body>
 </html>
